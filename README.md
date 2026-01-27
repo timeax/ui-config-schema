@@ -1,9 +1,17 @@
 ````md
 # Timeax UI Config Schema
 
-Portable, framework-agnostic primitives for describing **UI configuration forms** (fields, options, rules, secrets) and returning **structured validation results**.
+Portable, framework-agnostic primitives for describing **UI configuration forms** (fields, options, rules, secrets) and
+returning **structured validation results**.
 
-This package is meant to be shared across SDKs and host apps so they can expose a consistent “config UI schema” without coupling to any specific UI framework (React/Vue/etc.) or product domain (payments, plugins, etc.).
+This package is meant to be shared across SDKs and host apps so they can expose a consistent “config UI schema” without
+coupling to any specific UI framework (React/Vue/etc.) or product domain (payments, plugins, etc.).
+
+It supports both:
+
+- **Flat schemas** (classic `ConfigSchema` → `ConfigField[]`)
+- **Forti-style nested schemas** (tree: `UiConfigSchema` → `settings: { key: ConfigNode }` with `ConfigGroup` +
+  `ConfigField`)
 
 ---
 
@@ -17,15 +25,25 @@ composer require timeax/ui-config-schema
 
 ## What this package provides
 
-### Schema primitives
+### Forti-style tree schema
 
-* **`ConfigSchema`**: a collection of config fields (live + sandbox aware)
-* **`ConfigField`**: a single input definition (type, label, rules, default, help text, options, meta)
-* **`ConfigOption`**: discrete option values for selects/radios
+* **`UiConfigSchema`**: root container with `settings: array<string, ConfigNode>`
+* **`ConfigNode`**: node interface (either a group or a field)
+* **`ConfigGroup`**: a group node containing `children: array<string, ConfigNode>`
+* **`ConfigField`**: a field node (leaf) — also implements `ConfigNode`
+
+### Flat schema (backwards-compatible)
+
+* **`ConfigSchema`**: a list of `ConfigField` objects
+
+### Options
+
+* **`ConfigOption`**: discrete option values for selects/radios/multiselect, etc.
 
 ### Config values container
 
-* **`ConfigBag`**: holds `options` + `secrets`, and can filter itself to only keys allowed by a schema for the current mode (live vs sandbox)
+* **`ConfigBag`**: holds `options` + `secrets`, supports looking up values and filtering by schema (secrets excluded
+  from default serialization)
 
 ### Validation results
 
@@ -34,49 +52,76 @@ composer require timeax/ui-config-schema
 
 ### Optional contract
 
-* **`ProvidesConfigSchema`**: a tiny interface for anything that can expose a `ConfigSchema`
+* **`ProvidesConfigSchema`**: a tiny interface for anything that can expose a schema
 
 ---
 
-## Package goals
+## Included JSON Schema
 
-* **UI-agnostic:** describes inputs, not components.
-* **Domain-agnostic:** can power payment gateway configs, plugin configs, feature toggles, etc.
-* **Secret-safe defaults:** config serialization is public by default (secrets are excluded).
-* **Host-friendly:** a host can store both live + sandbox keys together, while runtime selects the active subset.
+This repository ships a Draft-07 JSON Schema that mirrors the Forti-style structure:
+
+* `schema/timeax.ui-config-schema.draft-07.json`
+
+It validates objects shaped like:
+
+```json
+{
+  "settings": {
+    "gateway": {
+      "type": "group",
+      "label": "Gateway",
+      "children": {
+        "public_key": {
+          "label": "Public Key",
+          "type": "text",
+          "required": true
+        },
+        "secret_key": {
+          "label": "Secret Key",
+          "type": "password",
+          "required": true,
+          "secret": true
+        }
+      }
+    }
+  }
+}
+```
 
 ---
 
-## Quick example
+## Quick examples
 
-### 1) Define a schema
+### 1) Define a Forti-style tree schema
 
 ```php
 <?php
 
 use Timeax\ConfigSchema\Schema\ConfigField;
+use Timeax\ConfigSchema\Schema\ConfigGroup;
+use Timeax\ConfigSchema\Schema\UiConfigSchema;
 use Timeax\ConfigSchema\Schema\ConfigOption;
-use Timeax\ConfigSchema\Schema\ConfigSchema;
 
-$schema = new ConfigSchema([
-    new ConfigField(
-        name: 'public_key',
-        label: 'Public Key',
-        required: true,
-        helpText: 'Your provider public key',
-        sandbox: false,
+$schema = new UiConfigSchema([
+    'gateway' => new ConfigGroup(
+        label: 'Gateway',
+        children: [
+            'public_key' => new ConfigField(
+                name: 'public_key',
+                label: 'Public Key',
+                required: true,
+            ),
+            'secret_key' => new ConfigField(
+                name: 'secret_key',
+                label: 'Secret Key',
+                type: 'password',
+                required: true,
+                secret: true,
+            ),
+        ],
     ),
 
-    new ConfigField(
-        name: 'secret_key',
-        label: 'Secret Key',
-        required: true,
-        secret: true,
-        helpText: 'Never expose this to the client',
-        sandbox: false,
-    ),
-
-    new ConfigField(
+    'mode' => new ConfigField(
         name: 'mode',
         label: 'Mode',
         type: 'select',
@@ -85,28 +130,37 @@ $schema = new ConfigSchema([
             new ConfigOption('card', 'Card'),
             new ConfigOption('bank', 'Bank Transfer'),
         ],
-        sandbox: false,
-    ),
-
-    // Sandbox/test keys (separate field set)
-    new ConfigField(
-        name: 'test_public_key',
-        label: 'Test Public Key',
-        required: true,
-        sandbox: true,
-    ),
-
-    new ConfigField(
-        name: 'test_secret_key',
-        label: 'Test Secret Key',
-        required: true,
-        secret: true,
-        sandbox: true,
     ),
 ]);
 ```
 
-### 2) Store config values with options + secrets
+### 2) Flatten a tree schema into a flat schema
+
+`flatten()` traverses the tree and returns a `ConfigSchema(fields[])`.
+
+It also stamps each field with its `group` path so the structure can be rebuilt later.
+
+```php
+<?php
+
+$flat = $schema->flatten();
+
+// ConfigSchema { fields: ConfigField[] }
+// Each field may carry ->group (e.g. "gateway")
+```
+
+### 3) Rebuild a Forti-style tree from a flat schema
+
+```php
+<?php
+
+use Timeax\ConfigSchema\Schema\ConfigSchema;
+
+/** @var ConfigSchema $flat */
+$tree = $flat->toUiConfigSchema();
+```
+
+### 4) Store config values with options + secrets
 
 ```php
 <?php
@@ -117,32 +171,18 @@ $config = new ConfigBag(
     sandbox: true,
     options: [
         'mode' => 'card',
-        'test_public_key' => 'pk_test_...',
+        'public_key' => 'pk_test_...',
     ],
     secrets: [
-        'test_secret_key' => 'sk_test_...',
+        'secret_key' => 'sk_test_...',
     ],
 );
+
+// secrets are excluded from jsonSerialize by default
+$public = $config->jsonSerialize();
 ```
 
-### 3) Filter values by schema for the active mode
-
-This is useful when a host stores both live and test keys in one record, but runtime wants only the active subset.
-
-```php
-<?php
-
-$filtered = $config->filterBySchema($schema);
-
-$filtered->option('test_public_key'); // available
-$filtered->secret('test_secret_key'); // available
-
-// not included (wrong mode)
-$filtered->option('public_key');      // null
-$filtered->secret('secret_key');      // null
-```
-
-### 4) Return a validation result (structured errors)
+### 5) Validation result example
 
 ```php
 <?php
@@ -150,45 +190,11 @@ $filtered->secret('secret_key');      // null
 use Timeax\ConfigSchema\Support\ConfigValidationResult;
 
 $result = ConfigValidationResult::fail()
-    ->addError('test_public_key', 'Required')
-    ->addError('test_secret_key', 'Required');
+    ->addError('public_key', 'Required')
+    ->addError('secret_key', 'Required');
 
 if (! $result->isOk()) {
-    // consistent error format for API responses
     return $result->jsonSerialize();
-}
-```
-
-The serialized format looks like:
-
-```json
-{
-  "ok": false,
-  "errors": {
-    "test_public_key": [{ "field": "test_public_key", "message": "Required", "code": null }],
-    "test_secret_key": [{ "field": "test_secret_key", "message": "Required", "code": null }]
-  }
-}
-```
-
----
-
-## Contract usage (optional)
-
-If you want a consistent way for drivers/modules to expose their config schema:
-
-```php
-<?php
-
-use Timeax\ConfigSchema\Contracts\ProvidesConfigSchema;
-use Timeax\ConfigSchema\Schema\ConfigSchema;
-
-final class SomeModule implements ProvidesConfigSchema
-{
-    public function configSchema(): ConfigSchema
-    {
-        // return schema...
-    }
 }
 ```
 
@@ -197,8 +203,8 @@ final class SomeModule implements ProvidesConfigSchema
 ## Notes on secrets
 
 * `ConfigBag::jsonSerialize()` intentionally excludes secrets.
-* Use `option()` for non-sensitive keys, `secret()` for sensitive keys.
-* The `ConfigField::$secret` flag allows UIs to render secret inputs accordingly, but the **host** is still responsible for never exposing secrets.
+* Use `ConfigField::$secret = true` to mark a field as sensitive.
+* Hosts should still enforce secret-handling (mask in UI, avoid logs, encrypt at rest if desired).
 
 ---
 
