@@ -2,12 +2,17 @@ src/
   Contracts/
     ProvidesConfigSchema.php
   Schema/
+    ConfigNode.php
+    ConfigGroup.php
     ConfigField.php
     ConfigOption.php
     ConfigSchema.php
+    UiConfigSchema.php
   Support/
     ConfigBag.php
     ConfigValidationError.php
     ConfigValidationResult.php
+schema/
+  timeax.ui-config-schema.draft-07.json
 composer.json
 README.md

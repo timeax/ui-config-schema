@@ -56,6 +56,27 @@
       "sizeAtCreate": 0,
       "groupName": "default",
       "groupRoot": "."
+    },
+    "src/Schema/ConfigNode.php": {
+      "path": "src/Schema/ConfigNode.php",
+      "createdAt": "2026-01-27T03:07:29.029Z",
+      "sizeAtCreate": 0,
+      "groupName": "default",
+      "groupRoot": "."
+    },
+    "src/Schema/ConfigGroup.php": {
+      "path": "src/Schema/ConfigGroup.php",
+      "createdAt": "2026-01-27T03:07:29.030Z",
+      "sizeAtCreate": 0,
+      "groupName": "default",
+      "groupRoot": "."
+    },
+    "src/Schema/UiConfigSchema.php": {
+      "path": "src/Schema/UiConfigSchema.php",
+      "createdAt": "2026-01-27T03:07:29.036Z",
+      "sizeAtCreate": 0,
+      "groupName": "default",
+      "groupRoot": "."
     }
   }
 }
