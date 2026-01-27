@@ -4,7 +4,7 @@ namespace Timeax\ConfigSchema\Schema;
 
 use JsonSerializable;
 
-final readonly class ConfigSchema implements JsonSerializable
+readonly class ConfigSchema implements JsonSerializable
 {
     /** @param array<int,ConfigField> $fields */
     public function __construct(public array $fields = [])
@@ -14,7 +14,7 @@ final readonly class ConfigSchema implements JsonSerializable
     /**
      * Return a schema containing only fields matching the requested sandbox mode.
      */
-    public function forSandbox(bool $sandbox): self
+    final public function forSandbox(bool $sandbox): self
     {
         $fields = array_values(array_filter(
             $this->fields,
@@ -46,7 +46,7 @@ final readonly class ConfigSchema implements JsonSerializable
         return $out;
     }
 
-    public function toUiConfigSchema(): UiConfigSchema
+    final public function toUiConfigSchema(): UiConfigSchema
     {
         $settings = [];
 

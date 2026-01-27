@@ -5,7 +5,7 @@ namespace Timeax\ConfigSchema\Support;
 use JsonSerializable;
 use Timeax\ConfigSchema\Schema\ConfigSchema;
 
-final readonly class ConfigBag implements JsonSerializable
+readonly class ConfigBag implements JsonSerializable
 {
     /**
      * @param array<string,mixed> $options
