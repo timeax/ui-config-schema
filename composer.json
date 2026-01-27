@@ -1,0 +1,18 @@
+{
+    "name": "timeax/ui-config-schema",
+    "description": "SDK config schema designed to provide a general shape for Input field configurations",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Timeax\\ConfigSchema\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "David Okpako",
+            "email": "timmyokpako@gmail.com"
+        }
+    ],
+    "require": {}
+}

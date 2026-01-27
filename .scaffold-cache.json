@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "entries": {
+    "src/Contracts/ProvidesConfigSchema.php": {
+      "path": "src/Contracts/ProvidesConfigSchema.php",
+      "createdAt": "2026-01-27T02:37:49.406Z",
+      "sizeAtCreate": 0,
+      "groupName": "default",
+      "groupRoot": "."
+    },
+    "src/Schema/ConfigField.php": {
+      "path": "src/Schema/ConfigField.php",
+      "createdAt": "2026-01-27T02:37:49.411Z",
+      "sizeAtCreate": 0,
+      "groupName": "default",
+      "groupRoot": "."
+    },
+    "src/Schema/ConfigOption.php": {
+      "path": "src/Schema/ConfigOption.php",
+      "createdAt": "2026-01-27T02:37:49.417Z",
+      "sizeAtCreate": 0,
+      "groupName": "default",
+      "groupRoot": "."
+    },
+    "src/Schema/ConfigSchema.php": {
+      "path": "src/Schema/ConfigSchema.php",
+      "createdAt": "2026-01-27T02:37:49.418Z",
+      "sizeAtCreate": 0,
+      "groupName": "default",
+      "groupRoot": "."
+    },
+    "src/Support/ConfigBag.php": {
+      "path": "src/Support/ConfigBag.php",
+      "createdAt": "2026-01-27T02:37:49.420Z",
+      "sizeAtCreate": 0,
+      "groupName": "default",
+      "groupRoot": "."
+    },
+    "src/Support/ConfigValidationError.php": {
+      "path": "src/Support/ConfigValidationError.php",
+      "createdAt": "2026-01-27T02:37:49.422Z",
+      "sizeAtCreate": 0,
+      "groupName": "default",
+      "groupRoot": "."
+    },
+    "src/Support/ConfigValidationResult.php": {
+      "path": "src/Support/ConfigValidationResult.php",
+      "createdAt": "2026-01-27T02:37:49.423Z",
+      "sizeAtCreate": 0,
+      "groupName": "default",
+      "groupRoot": "."
+    },
+    "README.md": {
+      "path": "README.md",
+      "createdAt": "2026-01-27T02:37:49.425Z",
+      "sizeAtCreate": 0,
+      "groupName": "default",
+      "groupRoot": "."
+    }
+  }
+}
