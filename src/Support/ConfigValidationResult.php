@@ -18,9 +18,14 @@ final class ConfigValidationResult implements JsonSerializable
         return new self(true);
     }
 
-    public static function fail(): self
+
+    public static function fail(array $errors): self
     {
-        return new self(false);
+        $instance = new self(false);
+        if ($errors) {
+            $instance->addErrors($errors);
+        }
+        return $instance;
     }
 
     public function addError(string $field, string $message, ?string $code = null): self
