@@ -28,6 +28,7 @@ composer require timeax/ui-config-schema
 ### Forti-style tree schema
 
 * **`UiConfigSchema`**: root container with `settings: array<string, ConfigNode>`
+* **`ConfigTab`**: optional UI tab metadata (`id`, `label`, `parentId`, `includes`, `excludes`)
 * **`ConfigNode`**: node interface (either a group or a field)
 * **`ConfigGroup`**: a group node containing `children: array<string, ConfigNode>`
 * **`ConfigField`**: a field node (leaf) — also implements `ConfigNode`
@@ -101,37 +102,48 @@ use Timeax\ConfigSchema\Schema\ConfigField;
 use Timeax\ConfigSchema\Schema\ConfigGroup;
 use Timeax\ConfigSchema\Schema\UiConfigSchema;
 use Timeax\ConfigSchema\Schema\ConfigOption;
+use Timeax\ConfigSchema\Schema\ConfigTab;
 
-$schema = new UiConfigSchema([
-    'gateway' => new ConfigGroup(
-        label: 'Gateway',
-        children: [
-            'public_key' => new ConfigField(
-                name: 'public_key',
-                label: 'Public Key',
-                required: true,
-            ),
-            'secret_key' => new ConfigField(
-                name: 'secret_key',
-                label: 'Secret Key',
-                type: 'password',
-                required: true,
-                secret: true,
-            ),
-        ],
-    ),
-
-    'mode' => new ConfigField(
-        name: 'mode',
-        label: 'Mode',
-        type: 'select',
-        required: true,
-        options: [
-            new ConfigOption('card', 'Card'),
-            new ConfigOption('bank', 'Bank Transfer'),
-        ],
-    ),
-]);
+$schema = new UiConfigSchema(
+    settings: [
+        'gateway' => new ConfigGroup(
+            label: 'Gateway',
+            tabs: ['payments'],
+            children: [
+                'public_key' => new ConfigField(
+                    name: 'public_key',
+                    label: 'Public Key',
+                    required: true,
+                    tabs: ['payments'],
+                ),
+                'secret_key' => new ConfigField(
+                    name: 'secret_key',
+                    label: 'Secret Key',
+                    type: 'password',
+                    required: true,
+                    secret: true,
+                    tabs: ['payments'],
+                ),
+            ],
+        ),
+        'mode' => new ConfigField(
+            name: 'mode',
+            label: 'Mode',
+            type: 'select',
+            required: true,
+            isButton: true,
+            includes: ['gateway'],
+            options: [
+                new ConfigOption('card', 'Card', id: 'mode_card', includes: ['public_key']),
+                new ConfigOption('bank', 'Bank Transfer', id: 'mode_bank', includes: ['secret_key']),
+            ],
+        ),
+    ],
+    tabs: [
+        new ConfigTab(id: 'payments', label: 'Payments'),
+        new ConfigTab(id: 'advanced', label: 'Advanced', parentId: 'payments'),
+    ],
+);
 ```
 
 ### 2) Flatten a tree schema into a flat schema

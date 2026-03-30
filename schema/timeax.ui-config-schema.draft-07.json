@@ -13,6 +13,13 @@
       "additionalProperties": {
         "$ref": "#/definitions/ConfigNode"
       }
+    },
+    "tabs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ConfigTab"
+      },
+      "default": []
     }
   },
   "required": [
@@ -64,11 +71,28 @@
     "ConfigFieldOption": {
       "type": "object",
       "properties": {
+        "id": {
+          "type": "string"
+        },
         "value": {
           "$ref": "#/definitions/ConfigOptionValue"
         },
         "label": {
           "type": "string"
+        },
+        "includes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "excludes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
         },
         "disabled": {
           "type": "boolean",
@@ -77,6 +101,47 @@
       },
       "required": [
         "value",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "ConfigTab": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "includes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "excludes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "meta": {
+          "type": "object",
+          "default": {}
+        }
+      },
+      "required": [
+        "id",
         "label"
       ],
       "additionalProperties": false
@@ -145,6 +210,9 @@
         "label": {
           "type": "string"
         },
+        "name": {
+          "type": "string"
+        },
         "type": {
           "$ref": "#/definitions/ConfigFieldType"
         },
@@ -166,6 +234,45 @@
         "default": {},
         "helpText": {
           "type": "string"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ConfigFieldOption"
+          },
+          "default": []
+        },
+        "group": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "tabs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "isButton": {
+          "type": "boolean",
+          "default": false
+        },
+        "includes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "excludes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
         },
         "sandbox": {
           "type": "boolean",
@@ -469,6 +576,27 @@
         },
         "meta": {
           "$ref": "#/definitions/ConfigMeta"
+        },
+        "tabs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "includes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "excludes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
         },
         "children": {
           "type": "object",

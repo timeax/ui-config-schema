@@ -11,8 +11,12 @@ final readonly class UiConfigSchema implements JsonSerializable
      * { settings: { key: ConfigNode } }
      *
      * @param array<string, ConfigNode> $settings
+     * @param array<int, ConfigTab> $tabs
      */
-    public function __construct(public array $settings = [])
+    public function __construct(
+        public array $settings = [],
+        public array $tabs = [],
+    )
     {
     }
 
@@ -21,7 +25,7 @@ final readonly class UiConfigSchema implements JsonSerializable
         $settings = $this->settings;
         $settings[$key] = $node;
 
-        return new self($settings);
+        return new self($settings, $this->tabs);
     }
 
     /**
@@ -74,6 +78,10 @@ final readonly class UiConfigSchema implements JsonSerializable
             'settings' => array_map(
                 static fn(ConfigNode $n) => $n->jsonSerialize(),
                 $this->settings
+            ),
+            'tabs' => array_map(
+                static fn(ConfigTab $t) => $t->jsonSerialize(),
+                $this->tabs
             ),
         ];
     }

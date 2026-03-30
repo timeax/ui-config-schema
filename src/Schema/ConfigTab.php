@@ -4,41 +4,31 @@ namespace Timeax\ConfigSchema\Schema;
 
 use JsonSerializable;
 
-final readonly class ConfigOption implements JsonSerializable
+final readonly class ConfigTab implements JsonSerializable
 {
-    public ?string $id;
-
     /**
      * @param array<int,string> $includes
      * @param array<int,string> $excludes
+     * @param array<string,mixed> $meta
      */
     public function __construct(
-        public string|int $value,
+        public string $id,
         public string $label,
-        ?string $id = null,
+        public ?string $parentId = null,
         public array $includes = [],
         public array $excludes = [],
-    ) {
-        $this->id = $id ?? self::deriveId($value);
-    }
+        public array $meta = [],
+    ) {}
 
     public function jsonSerialize(): array
     {
         return [
             'id' => $this->id,
-            'value' => $this->value,
             'label' => $this->label,
+            'parentId' => $this->parentId,
             'includes' => $this->includes,
             'excludes' => $this->excludes,
+            'meta' => $this->meta,
         ];
-    }
-
-    private static function deriveId(string|int $value): string
-    {
-        $normalized = strtolower(trim((string) $value));
-        $normalized = preg_replace('/[^a-z0-9]+/', '-', $normalized) ?? '';
-        $normalized = trim($normalized, '-');
-
-        return $normalized !== '' ? $normalized : 'option';
     }
 }
