@@ -29,7 +29,7 @@ final class ConfigFieldOptionsTest extends TestCase
         self::assertIsArray($serialized['options']);
         self::assertCount(2, $serialized['options']);
         self::assertSame('card', $serialized['options'][0]['value']);
-        self::assertSame('bank-transfer', $serialized['options'][1]['id']);
+        self::assertSame('bank', $serialized['options'][1]['id']);
     }
 
     public function testClosureOptionsSerializeAfterLazyResolution(): void
@@ -56,7 +56,7 @@ final class ConfigFieldOptionsTest extends TestCase
         self::assertSame(1, $calls);
         self::assertCount(2, $serialized['options']);
         self::assertSame('card', $serialized['options'][0]['id']);
-        self::assertSame('bank-transfer', $serialized['options'][1]['id']);
+        self::assertSame('bank', $serialized['options'][1]['id']);
     }
 
     public function testWithGroupPreservesClosureWithoutResolving(): void

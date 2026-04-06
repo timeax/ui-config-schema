@@ -9,13 +9,13 @@
 - [src/Schema/ConfigField.php](#2)  L52-L185
 - [src/Schema/ConfigGroup.php](#3)  L186-L255
 - [src/Schema/ConfigNode.php](#4)  L256-L281
-- [src/Schema/ConfigOption.php](#5)  L282-L334
-- [src/Schema/ConfigSchema.php](#6)  L335-L482
-- [src/Schema/ConfigTab.php](#7)  L483-L525
-- [src/Schema/UiConfigSchema.php](#8)  L526-L622
-- [src/Support/ConfigBag.php](#9)  L623-L703
-- [src/Support/ConfigValidationError.php](#10)  L704-L737
-- [src/Support/ConfigValidationResult.php](#11)  L738-L831
+- [src/Schema/ConfigOption.php](#5)  L282-L373
+- [src/Schema/ConfigSchema.php](#6)  L374-L521
+- [src/Schema/ConfigTab.php](#7)  L522-L564
+- [src/Schema/UiConfigSchema.php](#8)  L565-L661
+- [src/Support/ConfigBag.php](#9)  L662-L742
+- [src/Support/ConfigValidationError.php](#10)  L743-L776
+- [src/Support/ConfigValidationResult.php](#11)  L777-L870
 <!-- PRODEX_INDEX_LIST_END -->
 
 ---
@@ -290,6 +290,8 @@ interface ConfigNode extends JsonSerializable
 
 namespace Timeax\ConfigSchema\Schema;
 
+use Closure;
+use InvalidArgumentException;
 use JsonSerializable;
 
 final readonly class ConfigOption implements JsonSerializable
@@ -299,14 +301,17 @@ final readonly class ConfigOption implements JsonSerializable
     /**
      * @param array<int,string> $includes
      * @param array<int,string> $excludes
+     * @param array<int,ConfigOption>|Closure():array<int,ConfigOption> $children
      */
     public function __construct(
-        public string|int $value,
-        public string $label,
-        ?string $id = null,
-        public array $includes = [],
-        public array $excludes = [],
-    ) {
+        public string|int    $value,
+        public string        $label,
+        ?string              $id = null,
+        public array         $includes = [],
+        public array         $excludes = [],
+        public array|Closure $children = []
+    )
+    {
         $this->id = $id ?? self::deriveId($value);
     }
 
@@ -318,12 +323,46 @@ final readonly class ConfigOption implements JsonSerializable
             'label' => $this->label,
             'includes' => $this->includes,
             'excludes' => $this->excludes,
+            'children' => array_map(
+                static fn(ConfigOption $option) => $option->jsonSerialize(),
+                $this->resolveChildren()
+            ),
         ];
+    }
+
+    /**
+     * @return array<int,ConfigOption>
+     */
+    public function resolveChildren(): array
+    {
+        $resolved = is_array($this->children) ? $this->children : ($this->children)();
+
+        if (!is_array($resolved)) {
+            throw new InvalidArgumentException(
+                sprintf('ConfigOption "%s" children resolver must return an array of ConfigOption.', $this->id)
+            );
+        }
+
+        foreach ($resolved as $index => $child) {
+            if (!$child instanceof ConfigOption) {
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'ConfigOption "%s" children resolver returned invalid item at index %s; expected %s, got %s.',
+                        $this->id,
+                        (string) $index,
+                        ConfigOption::class,
+                        get_debug_type($child)
+                    )
+                );
+            }
+        }
+
+        return $resolved;
     }
 
     private static function deriveId(string|int $value): string
     {
-        $normalized = strtolower(trim((string) $value));
+        $normalized = strtolower(trim((string)$value));
         $normalized = preg_replace('/[^a-z0-9]+/', '-', $normalized) ?? '';
         $normalized = trim($normalized, '-');
 
@@ -829,4 +868,4 @@ final class ConfigValidationResult implements JsonSerializable
 
 ---
 *Generated with [Prodex](https://github.com/emxhive/prodex) — Codebase decoded.*
-<!-- PRODEx v1.4.11 | 2026-03-30T09:59:59.187Z -->
+<!-- PRODEx v1.4.11 | 2026-04-06T10:28:15.221Z -->

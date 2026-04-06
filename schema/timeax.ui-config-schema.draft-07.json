@@ -94,6 +94,13 @@
           },
           "default": []
         },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ConfigFieldOption"
+          },
+          "default": []
+        },
         "disabled": {
           "type": "boolean",
           "default": false
