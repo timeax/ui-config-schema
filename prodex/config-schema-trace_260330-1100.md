@@ -2,19 +2,20 @@
 > Note for LLMs: `Lx-Ly` ranges refer to lines in this Prodex trace file, not the original source files. Index metadata is provided via the HTML comment markers in this section.
 
 # Index
-<!-- PRODEX_INDEX_RANGE: L8-L17 -->
-<!-- PRODEX_FILE_COUNT: 10 -->
+<!-- PRODEX_INDEX_RANGE: L8-L18 -->
+<!-- PRODEX_FILE_COUNT: 11 -->
 <!-- PRODEX_INDEX_LIST_START -->
-- [src/Contracts/ProvidesConfigSchema.php](#1)  L21-L50
-- [src/Schema/ConfigField.php](#2)  L51-L137
-- [src/Schema/ConfigGroup.php](#3)  L138-L195
-- [src/Schema/ConfigNode.php](#4)  L196-L221
-- [src/Schema/ConfigOption.php](#5)  L222-L248
-- [src/Schema/ConfigSchema.php](#6)  L249-L396
-- [src/Schema/UiConfigSchema.php](#7)  L397-L485
-- [src/Support/ConfigBag.php](#8)  L486-L566
-- [src/Support/ConfigValidationError.php](#9)  L567-L600
-- [src/Support/ConfigValidationResult.php](#10)  L601-L694
+- [src/Contracts/ProvidesConfigSchema.php](#1)  L22-L51
+- [src/Schema/ConfigField.php](#2)  L52-L185
+- [src/Schema/ConfigGroup.php](#3)  L186-L255
+- [src/Schema/ConfigNode.php](#4)  L256-L281
+- [src/Schema/ConfigOption.php](#5)  L282-L334
+- [src/Schema/ConfigSchema.php](#6)  L335-L482
+- [src/Schema/ConfigTab.php](#7)  L483-L525
+- [src/Schema/UiConfigSchema.php](#8)  L526-L622
+- [src/Support/ConfigBag.php](#9)  L623-L703
+- [src/Support/ConfigValidationError.php](#10)  L704-L737
+- [src/Support/ConfigValidationResult.php](#11)  L738-L831
 <!-- PRODEX_INDEX_LIST_END -->
 
 ---
@@ -59,14 +60,19 @@ interface ProvidesConfigSchema
 
 namespace Timeax\ConfigSchema\Schema;
 
+use Closure;
+use InvalidArgumentException;
 use JsonSerializable;
 
 final readonly class ConfigField implements JsonSerializable, ConfigNode
 {
     /**
      * @param array<int,string> $rules
-     * @param array<int,ConfigOption> $options
+     * @param array<int,ConfigOption>|Closure():array<int,ConfigOption> $options
      * @param array<string,mixed> $meta
+     * @param array<int,string> $tabs
+     * @param array<int,string> $includes
+     * @param array<int,string> $excludes
      */
     public function __construct(
         public string  $name,
@@ -77,12 +83,16 @@ final readonly class ConfigField implements JsonSerializable, ConfigNode
         public array   $rules = [],
         public mixed   $default = null,
         public ?string $helpText = null,
-        public array   $options = [],
+        public array|Closure $options = [],
         public bool    $sandbox = false,
         public array   $meta = [],
 
         /** Group path like "gateway" or "gateway.credentials" (optional). */
         public ?string $group = null,
+        public array   $tabs = [],
+        public bool    $isButton = false,
+        public array   $includes = [],
+        public array   $excludes = [],
     )
     {
     }
@@ -107,7 +117,41 @@ final readonly class ConfigField implements JsonSerializable, ConfigNode
             sandbox: $this->sandbox,
             meta: $this->meta,
             group: $group,
+            tabs: $this->tabs,
+            isButton: $this->isButton,
+            includes: $this->includes,
+            excludes: $this->excludes,
         );
+    }
+
+    /**
+     * @return array<int,ConfigOption>
+     */
+    public function resolveOptions(): array
+    {
+        $resolved = is_array($this->options) ? $this->options : ($this->options)();
+
+        if (!is_array($resolved)) {
+            throw new InvalidArgumentException(
+                sprintf('ConfigField "%s" options resolver must return an array of ConfigOption.', $this->name)
+            );
+        }
+
+        foreach ($resolved as $index => $option) {
+            if (!$option instanceof ConfigOption) {
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'ConfigField "%s" options resolver returned invalid item at index %s; expected %s, got %s.',
+                        $this->name,
+                        (string) $index,
+                        ConfigOption::class,
+                        get_debug_type($option)
+                    )
+                );
+            }
+        }
+
+        return $resolved;
     }
 
     public function jsonSerialize(): array
@@ -123,13 +167,17 @@ final readonly class ConfigField implements JsonSerializable, ConfigNode
             'name' => $this->name,
             'options' => array_map(
                 static fn(ConfigOption $o) => $o->jsonSerialize(),
-                $this->options
+                $this->resolveOptions()
             ),
             'sandbox' => $this->sandbox,
             'meta' => $this->meta,
 
             // Optional, but useful for round-trips.
             'group' => $this->group,
+            'tabs' => $this->tabs,
+            'isButton' => $this->isButton,
+            'includes' => $this->includes,
+            'excludes' => $this->excludes,
         ];
     }
 }
@@ -151,12 +199,18 @@ final readonly class ConfigGroup implements ConfigNode
     /**
      * @param array<string, ConfigNode> $children
      * @param array<string, mixed> $meta
+     * @param array<int,string> $tabs
+     * @param array<int,string> $includes
+     * @param array<int,string> $excludes
      */
     public function __construct(
         public string $label,
         public bool $required = false,
         public array $children = [],
         public array $meta = [],
+        public array $tabs = [],
+        public array $includes = [],
+        public array $excludes = [],
     ) {}
 
     public function nodeType(): string
@@ -174,6 +228,9 @@ final readonly class ConfigGroup implements ConfigNode
             required: $this->required,
             children: $children,
             meta: $this->meta,
+            tabs: $this->tabs,
+            includes: $this->includes,
+            excludes: $this->excludes,
         );
     }
 
@@ -184,6 +241,9 @@ final readonly class ConfigGroup implements ConfigNode
             'label' => $this->label,
             'required' => $this->required,
             'meta' => $this->meta,
+            'tabs' => $this->tabs,
+            'includes' => $this->includes,
+            'excludes' => $this->excludes,
             'children' => array_map(
                 static fn(ConfigNode $n) => $n->jsonSerialize(),
                 $this->children
@@ -234,14 +294,40 @@ use JsonSerializable;
 
 final readonly class ConfigOption implements JsonSerializable
 {
+    public ?string $id;
+
+    /**
+     * @param array<int,string> $includes
+     * @param array<int,string> $excludes
+     */
     public function __construct(
         public string|int $value,
         public string $label,
-    ) {}
+        ?string $id = null,
+        public array $includes = [],
+        public array $excludes = [],
+    ) {
+        $this->id = $id ?? self::deriveId($value);
+    }
 
     public function jsonSerialize(): array
     {
-        return ['value' => $this->value, 'label' => $this->label];
+        return [
+            'id' => $this->id,
+            'value' => $this->value,
+            'label' => $this->label,
+            'includes' => $this->includes,
+            'excludes' => $this->excludes,
+        ];
+    }
+
+    private static function deriveId(string|int $value): string
+    {
+        $normalized = strtolower(trim((string) $value));
+        $normalized = preg_replace('/[^a-z0-9]+/', '-', $normalized) ?? '';
+        $normalized = trim($normalized, '-');
+
+        return $normalized !== '' ? $normalized : 'option';
     }
 }
 ```
@@ -398,6 +484,49 @@ readonly class ConfigSchema implements JsonSerializable
 #### 7
 
 
+` File: src/Schema/ConfigTab.php`  [↑ Back to top](#index)
+
+```php
+<?php declare(strict_types=1);
+
+namespace Timeax\ConfigSchema\Schema;
+
+use JsonSerializable;
+
+final readonly class ConfigTab implements JsonSerializable
+{
+    /**
+     * @param array<int,string> $includes
+     * @param array<int,string> $excludes
+     * @param array<string,mixed> $meta
+     */
+    public function __construct(
+        public string $id,
+        public string $label,
+        public ?string $parentId = null,
+        public array $includes = [],
+        public array $excludes = [],
+        public array $meta = [],
+    ) {}
+
+    public function jsonSerialize(): array
+    {
+        return [
+            'id' => $this->id,
+            'label' => $this->label,
+            'parentId' => $this->parentId,
+            'includes' => $this->includes,
+            'excludes' => $this->excludes,
+            'meta' => $this->meta,
+        ];
+    }
+}
+```
+
+---
+#### 8
+
+
 ` File: src/Schema/UiConfigSchema.php`  [↑ Back to top](#index)
 
 ```php
@@ -414,8 +543,12 @@ final readonly class UiConfigSchema implements JsonSerializable
      * { settings: { key: ConfigNode } }
      *
      * @param array<string, ConfigNode> $settings
+     * @param array<int, ConfigTab> $tabs
      */
-    public function __construct(public array $settings = [])
+    public function __construct(
+        public array $settings = [],
+        public array $tabs = [],
+    )
     {
     }
 
@@ -424,7 +557,7 @@ final readonly class UiConfigSchema implements JsonSerializable
         $settings = $this->settings;
         $settings[$key] = $node;
 
-        return new self($settings);
+        return new self($settings, $this->tabs);
     }
 
     /**
@@ -478,13 +611,17 @@ final readonly class UiConfigSchema implements JsonSerializable
                 static fn(ConfigNode $n) => $n->jsonSerialize(),
                 $this->settings
             ),
+            'tabs' => array_map(
+                static fn(ConfigTab $t) => $t->jsonSerialize(),
+                $this->tabs
+            ),
         ];
     }
 }
 ```
 
 ---
-#### 8
+#### 9
 
 
 ` File: src/Support/ConfigBag.php`  [↑ Back to top](#index)
@@ -565,7 +702,7 @@ readonly class ConfigBag implements JsonSerializable
 ```
 
 ---
-#### 9
+#### 10
 
 
 ` File: src/Support/ConfigValidationError.php`  [↑ Back to top](#index)
@@ -599,7 +736,7 @@ final readonly class ConfigValidationError implements JsonSerializable
 ```
 
 ---
-#### 10
+#### 11
 
 
 ` File: src/Support/ConfigValidationResult.php`  [↑ Back to top](#index)
@@ -692,4 +829,4 @@ final class ConfigValidationResult implements JsonSerializable
 
 ---
 *Generated with [Prodex](https://github.com/emxhive/prodex) — Codebase decoded.*
-<!-- PRODEx v1.4.11 | 2026-03-30T01:24:42.376Z -->
+<!-- PRODEx v1.4.11 | 2026-03-30T09:59:59.187Z -->
